@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "8309706232",
+    "firebase_url": "https://app-209618.firebaseio.com",
+    "project_id": "youtubeapp-209618",
+    "storage_bucket": "youtubeapp-209618.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:8309706232:android:9d6921823d6849b5",
+        "android_client_info": {
+          "package_name": "ru.tutudu.youtubeapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "8309706232-rcdcka6tm52np0el1i1co4d6b01v1v1o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ru.tutudu.youtubeapp",
+            "certificate_hash": "0b8bb4fe312ee44978e2f512f5103f9a07e655a3"
+          }
+        },
+        {
+          "client_id": "8309706232-ja39rgm9tdftan57nhmoj29c7vjehfqe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-cwUJwIq6bGdZ9on6f1yxBjr6ocObph8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "8309706232-ja39rgm9tdftan57nhmoj29c7vjehfqe.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
