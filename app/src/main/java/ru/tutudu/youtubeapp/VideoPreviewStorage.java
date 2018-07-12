@@ -2,7 +2,10 @@ package ru.tutudu.youtubeapp;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.apache.http.HttpEntity;
@@ -18,7 +21,9 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.StringJoiner;
 import java.util.concurrent.ExecutionException;
 
 import okhttp3.HttpUrl;
@@ -30,35 +35,50 @@ import okhttp3.HttpUrl;
 public class VideoPreviewStorage {
 
     private String nextToken;
-    private HttpUrl.Builder baseRequest;
+    private HttpUrl.Builder request;
+    private String videoIdsForQuery;
     private ArrayList<VideoPreview> data;
     private int count = 0;
-    public boolean flag = false;
+    public int searchState = 0;
 
 
-
-    public VideoPreviewStorage(String countryCode) {
-        baseRequest = HttpUrl.parse("https://www.googleapis.com/youtube/v3/videos").newBuilder();
-        baseRequest.addQueryParameter("part","snippet,statistics,contentDetails");
-        baseRequest.addQueryParameter("chart","mostPopular");
-        baseRequest.addQueryParameter("maxResults","10");
-        baseRequest.addQueryParameter("regionCode",countryCode);
-        baseRequest.addQueryParameter("videoCategoryId", String.valueOf(new Random().nextInt(2)+1));
-        baseRequest.addQueryParameter("key", YoutubeConfig.getApiKey());
-
+    // 0 - search, 1 - base request, 2 -trends
+    public VideoPreviewStorage(int what) {
+        request = HttpUrl.parse("https://www.googleapis.com/youtube/v3/videos").newBuilder()
+                .addQueryParameter("part","snippet,statistics,contentDetails")
+                .addQueryParameter("chart","mostPopular")
+                .addQueryParameter("maxResults","10")
+                .addQueryParameter("regionCode",MainActivity.getCountryCode())
+                .addQueryParameter("key", YoutubeConfig.getApiKey());
+        if (what == 1)
+            request.addQueryParameter("videoCategoryId", String.valueOf(new Random().nextInt(2) + 1));
     }
+
+    public VideoPreviewStorage(String searchText) {
+        searchState = 1;
+        request = HttpUrl.parse("https://www.googleapis.com/youtube/v3/search").newBuilder()
+                .addQueryParameter("part","snippet")
+                .addQueryParameter("maxResults","10")
+                .addQueryParameter("type", "video")
+                .addQueryParameter("q", searchText)
+                .addQueryParameter("regionCode",MainActivity.getCountryCode())
+                .addQueryParameter("key", YoutubeConfig.getApiKey());
+     }
+
+
 
 
     void changeRequest() {
-        if (count != 0) {
-            if (count == 1) {
-                baseRequest.addQueryParameter("pageToken", nextToken);
+        if (searchState != 2) {
+            if (count != 0) {
+                if (count == 1) {
+                    request.addQueryParameter("pageToken", nextToken);
+                } else {
+                    request.setQueryParameter("pageToken", nextToken);
+                }
             }
-            else {
-                baseRequest.setQueryParameter("pageToken", nextToken);
-            }
+            ++count;
         }
-        ++count;
     }
 
     private class RequestYoutubeAPI extends AsyncTask<Void, String, String> {
@@ -71,18 +91,21 @@ public class VideoPreviewStorage {
         protected String doInBackground(Void... params) {
             HttpClient httpClient = new DefaultHttpClient();
             changeRequest();
-            HttpGet httpGet = new HttpGet(baseRequest.toString());
-            Log.e("myAPP", "HMHM " + baseRequest.toString());
+            HttpGet httpGet = new HttpGet(request.toString());
             try {
                 HttpResponse response = httpClient.execute(httpGet);
                 HttpEntity httpEntity = response.getEntity();
                 String json = EntityUtils.toString(httpEntity);
                 try {
-                    data = parseVideoListFromResponse(new JSONObject(json));
+                    if (searchState == 1) {
+                        getVideoIdsString(new JSONObject(json));
+                    }
+                    else {
+                        data = parseVideoListFromResponse(new JSONObject(json));
+                    }
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                flag = true;
                 return json;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -94,19 +117,12 @@ public class VideoPreviewStorage {
         protected void onPostExecute(String response) {
             super.onPostExecute(response);
             if (response != null) {
-                try {
-                    JSONObject jsonObject = new JSONObject(response);
-                    Log.e("myAPP", "onPost.. " +jsonObject.toString());
-                  //  data = parseVideoListFromResponse(jsonObject);
-                 //   flag = true;
-                    Log.e("myAPP", "must added " + String.valueOf(data.size()));
-                    //updateList();
-                    for (VideoPreview elm : data) {
-                        elm.saveVideoPreview();
+                    if (searchState != 1) {
+                        for (VideoPreview elm : data) {
+                            elm.saveVideoPreview();
+                        }
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                    searchState = 0;
             }
         }
     }
@@ -114,43 +130,39 @@ public class VideoPreviewStorage {
     public ArrayList<VideoPreview> getData(int a, int b) {
         RequestYoutubeAPI requestYoutubeAPI = new RequestYoutubeAPI();
         try {
-            requestYoutubeAPI.execute().get();
-        } catch (InterruptedException e) {
-          //  Log.e("GOVNO", "1");
-        } catch (ExecutionException e) {
-           // Log.e("GOVNO", "2");
+            if (searchState == 1) {
+                requestYoutubeAPI.execute().get();
+                searchState = 2;
+                RequestYoutubeAPI secondRequestYoutubeAPI = new RequestYoutubeAPI();
+                secondRequestYoutubeAPI.execute().get();
+            }
+            else {
+                requestYoutubeAPI.execute().get();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-         while (!flag) {
-
-        }
-        if (data == null)
-            Log.e("MUAPP2", "HsIT");
-        flag = false;
-
         return data;
     }
 
     private ArrayList<VideoPreview> parseVideoListFromResponse(JSONObject jsonObject) {
         ArrayList<VideoPreview> mList = new ArrayList<>();
         try {
-            nextToken = jsonObject.getString("nextPageToken");
-            Log.e("myAPP", "NEXT TOKEN " + nextToken);
+            if (searchState != 2) {
+                nextToken = jsonObject.getString("nextPageToken");
+            }
         }
         catch (JSONException e) {
             e.printStackTrace();
         }
-
         if (jsonObject.has("items")) {
             try {
                 JSONArray jsonArray = jsonObject.getJSONArray("items");
                 for (int i = 0; i < jsonArray.length(); i++) {
-                    Log.e("myAPP", "obj");
                     JSONObject json = jsonArray.getJSONObject(i);
-                    Log.e("myAPP", json.toString());
                     if (json.has("id")) {
                         if (json.has("kind")) {
                             if (json.getString("kind").equals("youtube#video")) {
-
                                 VideoPreview youtubeObject = new VideoPreview(MainActivity.getContext());
                                 String videoId = json.getString("id");
                                 JSONObject jsonSnippet = json.getJSONObject("snippet");
@@ -172,12 +184,9 @@ public class VideoPreviewStorage {
                                 youtubeObject.setVideoDuration(duration);
 
                                 mList.add(youtubeObject);
-
                             }
                         }
                     }
-
-
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -186,6 +195,45 @@ public class VideoPreviewStorage {
         return mList;
 
     }
+
+
+    private void getVideoIdsString(JSONObject jsonObject) {
+        ArrayList<String> videoIds = parseVideoListFromResponseForSearch(jsonObject);
+        videoIdsForQuery = TextUtils.join(",", videoIds);
+        request = HttpUrl.parse("https://www.googleapis.com/youtube/v3/videos").newBuilder()
+                .addQueryParameter("part", "snippet,statistics,contentDetails")
+                .addQueryParameter("maxresults", "10")
+                .addQueryParameter("regionCode", MainActivity.getCountryCode())
+                .addQueryParameter("key", YoutubeConfig.getApiKey())
+                .addQueryParameter("id", videoIdsForQuery);
+    }
+
+    private ArrayList<String> parseVideoListFromResponseForSearch(JSONObject jsonObject) {
+        ArrayList<String> videoIds = new ArrayList<>();
+
+        if (jsonObject.has("items")) {
+            try {
+                JSONArray jsonArray = jsonObject.getJSONArray("items");
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject json = jsonArray.getJSONObject(i);
+                    Log.e("myAPP", json.toString());
+                    if (json.has("id")) {
+                        String videoId = json.getJSONObject("id").getString("videoId");
+                        videoIds.add(videoId);
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return videoIds;
+    }
+
+
+
+
+
+
 
     private String toFormat(String time) {
         String formatTime = "";

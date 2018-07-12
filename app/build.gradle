@@ -33,6 +33,8 @@ dependencies {
     compile 'com.squareup.okhttp3:okhttp:3.10.0'
     compile 'com.google.apis:google-api-services-youtube:v3-rev204-1.23.0'
     implementation files('libs/YouTubeAndroidPlayerApi.jar')
+    compile 'com.ms-square:expandableTextView:0.1.4'
+    compile 'com.android.support:percent:23.3.0'
 }
 
 

@@ -10,8 +10,12 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 
@@ -21,9 +25,6 @@ import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.squareup.picasso.Picasso;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 import java.util.concurrent.Executors;
 
 import okhttp3.OkHttpClient;
@@ -34,14 +35,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private RecyclerView mListView;
     private ImageView searchPic;
     private ImageView userPic;
+    private ImageView trendsBtn;
+    private ImageView homeBtn;
+    private EditText searchText;
     private VideoPreviewAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
     final OkHttpClient client = new OkHttpClient();
-   // private HttpUrl.Builder baseRequest;
-    private List<VideoPreview> newElems;
-   // private String nextToken;
+    private PagedList.Config config;
     private static Context mContext;
-    final private Random randomVideoId = new Random();
+    private static String countryCode;
 
 
     @Override
@@ -56,23 +58,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     startActivity(intentUserProfile);
                 }
                 break;
+            case R.id.trendsPicBVMA:
+                if (trendsBtn.isSelected())
+                    break;
+                trendsBtn.setSelected(true);
+                homeBtn.setSelected(false);
+                changeReguest(2, null);
+                break;
+            case R.id.homePicBVMA:
+                if (homeBtn.isSelected())
+                    break;
+                trendsBtn.setSelected(false);
+                homeBtn.setSelected(true);
+                changeReguest(1, null);
+                break;
 
+            case R.id.searchPicInTVMA:
+                searchText.setText("");
             default:
                 break;
         }
     }
 
+    private void changeReguest(int value, String searchText) {
+        MyPositionalDataSource dataSource;
+        if (searchText == null) {
+            dataSource = new MyPositionalDataSource(new VideoPreviewStorage(value));
+        }
+        else {
+            dataSource = new MyPositionalDataSource(new VideoPreviewStorage(searchText));
+        }
+        PagedList pagedList = new PagedList.Builder(dataSource, config)
+                .setNotifyExecutor(new MainThreadExecutor())
+                .setFetchExecutor(Executors.newSingleThreadExecutor())
+                .build();
+
+        mAdapter.submitList(pagedList);
+    }
+
+    public static String getCountryCode() {
+        return countryCode;
+    }
 
     public static Context getContext() {
         return mContext;
     }
 
-    private void updateList() {
-        for(VideoPreview elm : newElems) {
-          //  mAdapter.add(elm);
-            Log.e("myAPP", "MY FRIENDZZZ");
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,22 +112,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mListView = findViewById(R.id.listViewMA);
         searchPic = findViewById(R.id.searchPicInTVMA);
         userPic = findViewById(R.id.userPicTVMA);
+        trendsBtn = findViewById(R.id.trendsPicBVMA);
+        homeBtn = findViewById(R.id.homePicBVMA);
+        searchText = findViewById(R.id.searchTextMA);
+        trendsBtn.setOnClickListener(this);
+        homeBtn.setOnClickListener(this);
+        searchPic.setOnClickListener(this);
+        homeBtn.setSelected(true);
+        trendsBtn.setSelected(false);
         mContext = getApplicationContext();
         mLayoutManager = new LinearLayoutManager(this);
         mListView.setLayoutManager(mLayoutManager);
 
+        searchText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
+                if ((i == EditorInfo.IME_ACTION_DONE) || (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && (keyEvent.getAction() == KeyEvent.ACTION_DOWN )){
+                    changeReguest(0, searchText.getText().toString());
+                    return true;
+                }
+                else{
+                    return false;
+                }
+            }
+        });
+
         TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
-        String countryCode = tm.getSimCountryIso().toUpperCase();
+        countryCode = tm.getSimCountryIso().toUpperCase();
 
-        MyPositionalDataSource dataSource = new MyPositionalDataSource(new VideoPreviewStorage(countryCode));
+        MyPositionalDataSource dataSource = new MyPositionalDataSource(new VideoPreviewStorage(1));
 
-        PagedList.Config config = new PagedList.Config.Builder()
+        config = new PagedList.Config.Builder()
                 .setEnablePlaceholders(false)
                 .setPageSize(10)
                 .setInitialLoadSizeHint(10)
                 .build();
 
-        Log.e("MYAPP2", "hier");
         PagedList pagedList = new PagedList.Builder(dataSource, config)
                 .setNotifyExecutor(new MainThreadExecutor())
                 .setFetchExecutor(Executors.newSingleThreadExecutor())
@@ -119,13 +170,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         mListView.setAdapter(mAdapter);
 
-
-        Log.e("myAPP", countryCode.toUpperCase());
-
         GoogleAccount.init(getApplicationContext());
 
         userPic.setOnClickListener(this);
-
     }
 
     private void signIn() {
@@ -157,11 +204,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Picasso.with(this).load(account.getPhotoUrl()).into(userPic);
             }
             else {
-                userPic.setImageResource(R.drawable.common_google_signin_btn_icon_dark);
+                userPic.setImageResource(R.drawable.account_box);
             }
         } catch (ApiException e) {
             Toast.makeText(MainActivity.this, "Something gone wrong", Toast.LENGTH_SHORT).show();
-
         }
     }
 
@@ -171,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onStart();
         GoogleSignInAccount mGoogleSignInAccount = GoogleAccount.getAccount(getApplicationContext());
         if (mGoogleSignInAccount == null) {
-            userPic.setImageResource(R.mipmap.ic_launcher_round);
+            userPic.setImageResource(R.drawable.incognito);
         }
         else {
             Picasso.with(this).load(mGoogleSignInAccount.getPhotoUrl()).into(userPic);
