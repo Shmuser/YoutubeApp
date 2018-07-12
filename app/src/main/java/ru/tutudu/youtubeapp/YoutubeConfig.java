@@ -9,7 +9,7 @@ package ru.tutudu.youtubeapp;
  */
 public class YoutubeConfig {
 
-    public static final String API_KEY = "api_key";
+    static final String API_KEY = "api_key";
 
     public static String getApiKey() {
         return API_KEY;

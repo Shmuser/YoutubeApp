@@ -14,16 +14,16 @@ import java.net.URL;
  * Created by vlad on 09.07.18.
  */
 
-public class VideoPreviewView extends RelativeLayout {
+public class VideoPreview extends RelativeLayout {
 
     private ImageView videoPreview;
     private TextView videoDuration;
     private TextView videoTitle;
     private TextView videoViews;
     private String previewURL;
-    private String videiId;
+    private String videoId;
 
-    public VideoPreviewView(Context context) {
+    public VideoPreview(Context context) {
         super(context);
         initComponent();
     }
@@ -53,16 +53,19 @@ public class VideoPreviewView extends RelativeLayout {
     }
 
     public void setVideoPreview(String url) {
-        Picasso.with(getContext()).load(url).into(videoPreview);
         previewURL = url;
     }
 
-    public void setVideiId(String id) {
-        videiId = id;
+    public void saveVideoPreview() {
+        Picasso.with(MainActivity.getContext()).load(previewURL).into(videoPreview);
     }
 
-    public String getVideiId() {
-        return videiId;
+    public void setVideoId(String id) {
+        videoId = id;
+    }
+
+    public String getVideoId() {
+        return videoId;
     }
 
     public String getVideoPreview() {

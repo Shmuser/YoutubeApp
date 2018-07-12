@@ -1,15 +1,17 @@
 package ru.tutudu.youtubeapp;
 
+import android.arch.paging.PagedList;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.util.DiffUtil;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.Toast;
 
 
@@ -19,34 +21,28 @@ import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.squareup.picasso.Picasso;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.Executors;
 
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
-    private ListView mListView;
+    private RecyclerView mListView;
     private ImageView searchPic;
     private ImageView userPic;
     private VideoPreviewAdapter mAdapter;
+    private RecyclerView.LayoutManager mLayoutManager;
     final OkHttpClient client = new OkHttpClient();
-    private HttpUrl.Builder baseRequest;
-    private List<VideoPreviewView> newElems;
-    private String nextToken;
+   // private HttpUrl.Builder baseRequest;
+    private List<VideoPreview> newElems;
+   // private String nextToken;
+    private static Context mContext;
+    final private Random randomVideoId = new Random();
+
 
     @Override
     public void onClick(View v) {
@@ -67,9 +63,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
+    public static Context getContext() {
+        return mContext;
+    }
+
     private void updateList() {
-        for(VideoPreviewView elm : newElems) {
-            mAdapter.add(elm);
+        for(VideoPreview elm : newElems) {
+          //  mAdapter.add(elm);
             Log.e("myAPP", "MY FRIENDZZZ");
         }
     }
@@ -81,38 +81,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mListView = findViewById(R.id.listViewMA);
         searchPic = findViewById(R.id.searchPicInTVMA);
         userPic = findViewById(R.id.userPicTVMA);
-
-        //final VideoPreviewView videoPreview = new VideoPreviewView(getApplicationContext());
-
-        final List<VideoPreviewView> fruits_list = new ArrayList<VideoPreviewView>();
-       // fruits_list.add(videoPreview);
-
-        mAdapter = new VideoPreviewAdapter(this, fruits_list);
-        mListView.setAdapter(mAdapter);
-
-        baseRequest = HttpUrl.parse("https://www.googleapis.com/youtube/v3/videos").newBuilder();
-        baseRequest.addQueryParameter("part","snippet,statistics,contentDetails");
-        baseRequest.addQueryParameter("chart","mostPopular");
-        baseRequest.addQueryParameter("maxResults","5");
+        mContext = getApplicationContext();
+        mLayoutManager = new LinearLayoutManager(this);
+        mListView.setLayoutManager(mLayoutManager);
 
         TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         String countryCode = tm.getSimCountryIso().toUpperCase();
+
+        MyPositionalDataSource dataSource = new MyPositionalDataSource(new VideoPreviewStorage(countryCode));
+
+        PagedList.Config config = new PagedList.Config.Builder()
+                .setEnablePlaceholders(false)
+                .setPageSize(10)
+                .setInitialLoadSizeHint(10)
+                .build();
+
+        Log.e("MYAPP2", "hier");
+        PagedList pagedList = new PagedList.Builder(dataSource, config)
+                .setNotifyExecutor(new MainThreadExecutor())
+                .setFetchExecutor(Executors.newSingleThreadExecutor())
+                .build();
+
+
+        mAdapter = new VideoPreviewAdapter(new DiffUtil.ItemCallback<VideoPreview>() {
+            @Override
+            public boolean areItemsTheSame(VideoPreview oldItem, VideoPreview newItem) {
+                return false;
+            }
+
+            @Override
+            public boolean areContentsTheSame(VideoPreview oldItem, VideoPreview newItem) {
+                return false;
+            }
+        });
+        mAdapter.submitList(pagedList);
+        mAdapter.setContext(getApplicationContext());
+
+        mListView.setAdapter(mAdapter);
+
+
         Log.e("myAPP", countryCode.toUpperCase());
-        baseRequest.addQueryParameter("regionCode",countryCode); ///////////////////////////////////////////
-
-        baseRequest.addQueryParameter("videoCategoryId","1");
-        baseRequest.addQueryParameter("key", YoutubeConfig.getApiKey());
-
-        Log.e("myAPP","UA " + baseRequest.toString());
-
-        Log.e("myAPP","FE " + baseRequest.build().url());
-
-        Log.e("MYAAAAAAPPP", baseRequest.toString());
 
         GoogleAccount.init(getApplicationContext());
 
         userPic.setOnClickListener(this);
-        new RequestYoutubeAPI().execute();
 
     }
 
@@ -166,159 +178,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
-
-    private class RequestYoutubeAPI extends AsyncTask<Void, String, String> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected String doInBackground(Void... params) {
-            HttpClient httpClient = new DefaultHttpClient();
-            HttpGet httpGet = new HttpGet(baseRequest.toString());
-            Log.e("myAPP", baseRequest.toString());
-            try {
-                HttpResponse response = httpClient.execute(httpGet);
-                HttpEntity httpEntity = response.getEntity();
-                String json = EntityUtils.toString(httpEntity);
-
-                return json;
-            } catch (IOException e) {
-
-                e.printStackTrace();
-            }
-
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String response) {
-            super.onPostExecute(response);
-            if (response != null) {
-                try {
-                    JSONObject jsonObject = new JSONObject(response);
-                    Log.e("myAPP", "onPost.. " +jsonObject.toString());
-                    newElems = parseVideoListFromResponse(jsonObject);
-                    Log.e("myAPP", "must added " + String.valueOf(newElems.size()));
-                    updateList();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-
-    public ArrayList<VideoPreviewView> parseVideoListFromResponse(JSONObject jsonObject) {
-        ArrayList<VideoPreviewView> mList = new ArrayList<>();
-        try {
-            nextToken = jsonObject.getString("nextPageToken");
-            Log.e("myAPP", "NEXT TOKEN " + nextToken);
-        }
-        catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        if (jsonObject.has("items")) {
-            try {
-                JSONArray jsonArray = jsonObject.getJSONArray("items");
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    Log.e("myAPP", "obj");
-                    JSONObject json = jsonArray.getJSONObject(i);
-                    Log.e("myAPP", json.toString());
-                    if (json.has("id")) {
-                    //   JSONObject jsonID = json.getJSONObject("id");
-
-                        if (json.has("kind")) {
-                            if (json.getString("kind").equals("youtube#video")) {
-
-                                VideoPreviewView youtubeObject = new VideoPreviewView(getApplicationContext());
-
-                                JSONObject jsonSnippet = json.getJSONObject("snippet");
-                                String title = jsonSnippet.getString("title");
-                                String previewURL = jsonSnippet.getJSONObject("thumbnails")
-                                        .getJSONObject("medium")
-                                        .getString("url");
-
-                                String viewsCount = json.getJSONObject("statistics").getString("viewCount");
-                                String duration = json.getJSONObject("contentDetails").getString("duration");
-
-                                duration = duration.substring(2);
-                                duration = toFormat(duration);
-
-                                youtubeObject.setVideoTitle(title);
-                                youtubeObject.setVideoPreview(previewURL);
-                                youtubeObject.setVideoViews(Integer.valueOf(viewsCount));
-                                youtubeObject.setVideoDuration(duration);
-
-                                mList.add(youtubeObject);
-
-                            }
-                        }
-                    }
-
-
-                }
-            } catch (JSONException e) {
-                                e.printStackTrace();
-            }
-        }
-        return mList;
-
-    }
-
-    private String toFormat(String time) {
-        String formatTime = "";
-        int ind = time.indexOf("H");
-        if (ind != -1) {
-            formatTime += time.substring(0, time.indexOf("H"));
-        }
-        time = time.substring(ind + 1);
-
-        ind = time.indexOf("M");
-        if (ind != -1) {
-            String minutes = time.substring(0, ind);
-            if (!formatTime.equals("")) {
-                if (minutes.length() < 2) {
-                    formatTime = formatTime + ":0" + minutes;
-                }
-                else {
-                    formatTime = formatTime + ":" + minutes;
-                }
-            }
-            else {
-                formatTime = minutes;
-            }
-            time = time.substring(ind + 1);
-
-        }
-        else {
-            if (!formatTime.equals("")) {
-                formatTime += ":00";
-            }
-        }
-        ind = time.indexOf("S");
-        if (ind != -1) {
-            String seconds = time.substring(0, ind);
-            if (!formatTime.equals("")) {
-                if (seconds.length() < 2) {
-                    formatTime = formatTime + ":0" + seconds;
-                }
-                else {
-                    formatTime = formatTime + ":" + seconds;
-                }
-            }
-            else {
-                formatTime = seconds;
-            }
-        }
-        else {
-            formatTime += ":00";
-        }
-
-        return formatTime;
-    }
-
 }
