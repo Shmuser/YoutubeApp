@@ -23,6 +23,7 @@ dependencies {
     implementation 'com.android.support:appcompat-v7:27.1.0'
     implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     implementation 'android.arch.paging:runtime:1.0.1'
+    implementation 'de.hdodenhof:circleimageview:2.2.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
@@ -34,7 +35,6 @@ dependencies {
     compile 'com.google.apis:google-api-services-youtube:v3-rev204-1.23.0'
     implementation files('libs/YouTubeAndroidPlayerApi.jar')
     compile 'com.ms-square:expandableTextView:0.1.4'
-    compile 'com.android.support:percent:23.3.0'
 }
 
 
