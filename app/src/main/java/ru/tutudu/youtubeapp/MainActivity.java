@@ -9,10 +9,10 @@ import android.support.v7.util.DiffUtil;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -40,7 +40,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private EditText searchText;
     private VideoPreviewAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-    final OkHttpClient client = new OkHttpClient();
     private PagedList.Config config;
     private static Context mContext;
     private static String countryCode;
@@ -96,9 +95,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mAdapter.submitList(pagedList);
     }
 
+
     public static String getCountryCode() {
         return countryCode;
     }
+
 
     public static Context getContext() {
         return mContext;
@@ -128,6 +129,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public boolean onEditorAction(TextView textView, int i, KeyEvent keyEvent) {
                 if ((i == EditorInfo.IME_ACTION_DONE) || (keyEvent.getKeyCode() == KeyEvent.KEYCODE_ENTER) && (keyEvent.getAction() == KeyEvent.ACTION_DOWN )){
+                    InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    inputManager.hideSoftInputFromWindow(textView.getApplicationWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
                     changeReguest(0, searchText.getText().toString());
                     return true;
                 }
@@ -175,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         userPic.setOnClickListener(this);
     }
 
+
     private void signIn() {
         Task<GoogleSignInAccount> task = GoogleAccount.getClient().silentSignIn();
         if (task.isSuccessful()) {
@@ -195,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             handleSignInResult(task);
         }
     }
+
 
     private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
         try {
