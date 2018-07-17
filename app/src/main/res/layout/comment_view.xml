@@ -10,10 +10,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="2dip"
-            android:background="#000"/>
         <LinearLayout
 
             android:layout_width="match_parent"
@@ -64,15 +60,16 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
+                        android:layout_marginBottom="5dip"
                         android:src="@drawable/thumb_up_outline"/>
 
                     <TextView
-                        android:layout_marginTop="5dip"
                         android:layout_marginLeft="10dip"
                         android:id="@+id/likesCommentCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="15dip"
+                        android:layout_marginBottom="5dip"
                         android:textColor="#000"
                         android:text="12345"/>
 
@@ -84,7 +81,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="2dip"
-            android:background="@color/colorPrimary"/>
+            android:background="@color/colorPrimaryDark"/>
 
 
         <ScrollView
@@ -119,8 +116,9 @@
 
         </ScrollView>
         <ImageView
+            android:layout_marginTop="3dip"
             android:layout_width="match_parent"
             android:layout_height="2dip"
-            android:background="@color/colorPrimary"/>
+            android:background="@drawable/grad_delim_dark"/>
     </LinearLayout>
 </RelativeLayout>
