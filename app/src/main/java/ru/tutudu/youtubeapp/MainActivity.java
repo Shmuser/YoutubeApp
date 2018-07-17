@@ -27,14 +27,14 @@ import com.squareup.picasso.Picasso;
 
 import java.util.concurrent.Executors;
 
-import okhttp3.OkHttpClient;
+import de.hdodenhof.circleimageview.CircleImageView;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     private RecyclerView mListView;
     private ImageView searchPic;
-    private ImageView userPic;
+    private CircleImageView userPic;
     private ImageView trendsBtn;
     private ImageView homeBtn;
     private EditText searchText;
